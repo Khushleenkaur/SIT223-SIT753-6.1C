@@ -1,0 +1,96 @@
+pipeline {
+    agent any
+
+    environment {
+        // Environment variables for SMTP
+        SMTP_HOST = 'smtp.gmail.com'
+        SMTP_PORT = '587'
+        SMTP_USER = 'kushleen'
+        SMTP_PASS = 'kushleen'
+        RECIPIENT_EMAIL = 'recipient@gmail.com'
+        // Assuming using Maven for a Java project
+        MVN_PATH = '/usr/bin/mvn'
+    }
+
+    tools {
+        // Ensure Jenkins uses Maven and JDK configured
+        maven 'Maven' // The name of the Maven tool configured in Jenkins
+        jdk 'JDK'    // The name of the JDK tool configured in Jenkins
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checking out the code from Git repository
+                checkout scm
+            }
+        }
+        stage('Build') {
+            steps {
+                echo 'Building the project...'
+                sh "${env.MVN_PATH} clean package"
+            }
+        }
+        stage('Unit and Integration Tests') {
+            steps {
+                echo 'Running tests...'
+                sh "${env.MVN_PATH} test"
+            }
+        }
+        stage('Code Analysis') {
+            steps {
+                echo 'Analyzing code...'
+                sh "${env.MVN_PATH} sonar:sonar"
+            }
+        }
+        stage('Security Scan') {
+            steps {
+                echo 'Conducting security scan...'
+                // Assuming using a script to run a security scan
+                sh './run-security-scan.sh'
+            }
+        }
+        stage('Deploy to Staging') {
+            steps {
+                echo 'Deploying to staging environment...'
+                // Assuming using a script to deploy
+                sh './deploy-staging.sh'
+            }
+        }
+        stage('Integration Tests on Staging') {
+            steps {
+                echo 'Running integration tests on staging environment...'
+                // Additional tests could be triggered here
+                sh './run-integration-tests-staging.sh'
+            }
+        }
+        stage('Deploy to Production') {
+            steps {
+                echo 'Deploying to production environment...'
+                sh './deploy-production.sh'
+            }
+        }
+    }
+
+    post {
+        always {
+            mail bcc: '',
+                  body: "The pipeline execution completed. Check Jenkins for more details.",
+                  subject: "Pipeline Status: ${currentBuild.currentResult}",
+                  to: "${env.RECIPIENT_EMAIL}",
+                  replyTo: "${env.SMTP_USER}",
+                  from: "${env.SMTP_USER}",
+                  smtpHost: "${env.SMTP_HOST}",
+                  smtpPort: "${env.SMTP_PORT}",
+                  useSsl: true,
+                  username: "${env.SMTP_USER}",
+                  password: "${env.SMTP_PASS}"
+        }
+        success {
+            echo 'Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline execution failed!'
+        }
+    }
+}
