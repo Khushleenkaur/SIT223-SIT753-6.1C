@@ -1,96 +1,48 @@
 pipeline {
-    agent any
-
-    environment {
-        // Environment variables for SMTP
-        SMTP_HOST = 'smtp.gmail.com'
-        SMTP_PORT = '587'
-        SMTP_USER = 'kushleen'
-        SMTP_PASS = 'kushleen'
-        RECIPIENT_EMAIL = 'recipient@gmail.com'
-        // Assuming using Maven for a Java project
-        MVN_PATH = '/usr/bin/mvn'
-    }
-
-    tools {
-        // Ensure Jenkins uses Maven and JDK configured
-        maven 'Maven' // The name of the Maven tool configured in Jenkins
-        jdk 'JDK'    // The name of the JDK tool configured in Jenkins
-    }
+    agent any 
 
     stages {
-        stage('Checkout') {
-            steps {
-                // Checking out the code from Git repository
-                checkout scm
-            }
-        }
         stage('Build') {
             steps {
-                echo 'Building the project...'
-                sh "${env.MVN_PATH} clean package"
+                // Use Maven to build
+                sh 'mvn clean install'
             }
         }
         stage('Unit and Integration Tests') {
             steps {
-                echo 'Running tests...'
-                sh "${env.MVN_PATH} test"
+                // Use JUnit or TestNG for running tests
+                sh 'mvn test'
             }
         }
         stage('Code Analysis') {
             steps {
-                echo 'Analyzing code...'
-                sh "${env.MVN_PATH} sonar:sonar"
+                // Use SonarQube for code analysis
+                sh 'mvn sonar:sonar'
             }
         }
         stage('Security Scan') {
             steps {
-                echo 'Conducting security scan...'
-                // Assuming using a script to run a security scan
-                sh './run-security-scan.sh'
+                // Use OWASP Dependency-Check
+                sh 'dependency-check.sh --project MyProject --scan ./'
             }
         }
         stage('Deploy to Staging') {
             steps {
-                echo 'Deploying to staging environment...'
-                // Assuming using a script to deploy
+                // Deploy to AWS EC2 instance
                 sh './deploy-staging.sh'
             }
         }
         stage('Integration Tests on Staging') {
             steps {
-                echo 'Running integration tests on staging environment...'
-                // Additional tests could be triggered here
+                // Use Selenium for web application testing
                 sh './run-integration-tests-staging.sh'
             }
         }
         stage('Deploy to Production') {
             steps {
-                echo 'Deploying to production environment...'
+                // Deploy to AWS EC2
                 sh './deploy-production.sh'
             }
-        }
-    }
-
-    post {
-        always {
-            mail bcc: '',
-                  body: "The pipeline execution completed. Check Jenkins for more details.",
-                  subject: "Pipeline Status: ${currentBuild.currentResult}",
-                  to: "${env.RECIPIENT_EMAIL}",
-                  replyTo: "${env.SMTP_USER}",
-                  from: "${env.SMTP_USER}",
-                  smtpHost: "${env.SMTP_HOST}",
-                  smtpPort: "${env.SMTP_PORT}",
-                  useSsl: true,
-                  username: "${env.SMTP_USER}",
-                  password: "${env.SMTP_PASS}"
-        }
-        success {
-            echo 'Pipeline executed successfully!'
-        }
-        failure {
-            echo 'Pipeline execution failed!'
         }
     }
 }
